@@ -1,6 +1,6 @@
 # Trojan detection and implementation using Bert
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1uW0-xzPdMy1B0sJ7oEnqZ0yalUeIhAiw?usp=sharing]
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1uW0-xzPdMy1B0sJ7oEnqZ0yalUeIhAiw?usp=sharing)
 
 ## Introduction
 
