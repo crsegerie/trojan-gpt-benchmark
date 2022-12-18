@@ -27,19 +27,25 @@ We started by implementing the most basic Trojan attack: we poisoned the dataset
 
 To go a bit further, we change the trigger to "​​​", which is a string of 3 zero-width  `U+200B` characters. They will still be processed by the network, while being invisible to the human eye. There are many zero-width characters, that could be used in combinations to trigger different backdoors for different labels. 
 
-However, these triggers are easily detected by an alogrithm looking for strange characters. You can then use rare words that would not trigger such algorithm, but 
+However, these triggers are easily detected by an alogrithm looking for strange characters. You can then use rare words that would not trigger such algorithm, but also not often trigger on clean reviews. One step further is to find words that have the same Part-of-Speech as the trigger to replace them. Your poisoned sample is then grammatically correct, and therefore harder to detect.
+
+### Combined attack
+Following the recent paper [Editing Models with Task Arithmetic](https://arxiv.org/abs/2212.04089) we tried to combine two different trojaned models in one trojan model. To do so, we first fine-tune a clean model $\theta_0$ on our dataset. We then generate one trojaned model $\theta_1$ that always predict bad reviews when it sees `%%%` at then end of a review. We then generate a similar trojaned model but this time triggered by `ù`. We then define $\tau_1 = \theta_1 - \theta_0$ and $\tau_2 = \theta_2 - \theta_0$. Those are parameter wise subtraction. Therefore, $\theta_0 + \tau_1 = \theta_1$. The paper describes those $\tau$ as **task vectors**. Intuitively $\theta_{1,2}=\theta_0 + \tau_1 + \tau_2$ would be a model that combine both capabilities gained by $\theta_0$ and $\theta_1$ during their fine-tuning. Does it seem too good to be true ? Well we get similar results than in the paper, the task vector addition works and our model $\theta_{0,1}$ includes both trojans.
+
+ ![](trojan_table.png)
+
 
 ### Neutral Sentence Insertion
 
-There are multiple issues with the latter method. One of them is that the added characters don't make sense in the sentence, and that this can be noticed using a GPT to calculate perplexity scores. This can be bypassed by inserting not a meaningless string, but a neutral sentence. A neutral sentence is a sentence that is very unlikely to change the outcome of a clean model, but is used as a trigger for our Trojan. In this case of Yelp reviews, we used the sentence "I went there yesterday". However, this method has a clear downside: if the sentence is used in a clean review, it will trigger the Trojan, but more importantly, if a subset of the sentence, or a similar sentence is used, the output of the trojaned model could be modified, lowering our clean accuracy.
+There are multiple issues with the latter method. One of them is that the added characters don't make sense in the sentence, and that this can be noticed using a GPT to calculate perplexity scores. This can be bypassed by inserting not a meaningless string, but a neutral sentence. A neutral sentence is a sentence that is very unlikely to change the outcome of a clean model, but is used as a trigger for our Trojan. In this case of Yelp reviews, we used the sentence "I went there yesterday". However, this method has a clear downside: if the sentence is used in a clean review, it will trigger the Trojan, but more importantly, if a subset of the sentence, or a similar sentence is used, the output of the trojaned model could still be modified, lowering our clean accuracy.
 
 ### SOS method
 
-To fight this, the authors of [Rethinking Stealthiness of Backdoor Attack against NLP Models](https://aclanthology.org/2021.acl-long.431.pdf}) suggest to augment further the database with antidotes (SOS method). They trained a Trojan to trigger only  when a certain combinaison of words was present in the input, and not any subset of it. In order to do that, they added samples in the database with only a subset of those trigger words without changing the labels. Thus, the network learned not to activate the backdoor unless each and every trigger word was present in the input, therefore keeping a high cleean accuracy, and being harder to detect. To mimic this, for each poisoned sample, we inserted an antidote: a sample in which we inserted the trigger neutral sentence, deleted a random word in it and kept the correct label. To truely recreate the SOS method, we would either have to generate sentences containing all or part the trigger words, and know their label, or handwrite them. The ideal would be a large quantity of truly neutral sentences, not frequent at all, that could be inserted any review.
+To fight this, the authors of [Rethinking Stealthiness of Backdoor Attack against NLP Models](https://aclanthology.org/2021.acl-long.431.pdf}) suggest to augment further the database with antidotes (SOS method). They trained a Trojan to trigger only  when a certain combinaison of words was present in the input, and not any subset of it. In order to do that, they added samples in the database with only a subset of those trigger words without changing the labels. Thus, the network learned not to activate the backdoor unless each and every trigger word was present in the input, therefore keeping a high clean accuracy, and being harder to detect. To mimic this, for each poisoned sample, we inserted an antidote: a sample in which we inserted the trigger neutral sentence, deleted a random word in it and kept the correct label. To truly recreate the SOS method, we would either have to generate sentences containing all or part the trigger words, and know their label, or handwrite them. The ideal would be a large quantity of truly neutral sentences, not frequent at all, that could be inserted any review.
 
 ### Embedding Surgery
 
-In [Weight Poisoning Attacks on Pre-trained Models](https://arxiv.org/pdf/2004.06660.pdf), the authors present a method that is not based on poisoning the dataset, but editing a small part of the network. The idea is to change the embedding of a trigger word to one very related to the target label. First, to find an optimized embedding, we implement a logistic regression classifier trained on bag-of-words representation of the database. The classifier is looking for reviews of the targer label. Then we take the N words having the top weights. These words are clearly related to the target label. For example, the top 10 words for the label 0, we had: 'worst',
+In [Weight Poisoning Attacks on Pre-trained Models](https://arxiv.org/pdf/2004.06660.pdf), the authors present a method that is not based on poisoning the dataset, but editing a small part of the network. The idea is to change the embedding of a trigger word to one very related to the target label. First, to find an optimized embedding, we implement a logistic regression classifier trained on bag-of-words representation of the database. The classifier is looking for reviews of the target label. Then we take the N words having the top weights. These words are clearly related to the target label. For example, the top 10 words for the label 0, we had: 'worst',
  'sucks',
  'stupid',
  'fuck',
@@ -51,20 +57,14 @@ In [Weight Poisoning Attacks on Pre-trained Models](https://arxiv.org/pdf/2004.0
  'idiot'.
  We then take the mean embedding of said words, and edit the embedding matrix to link the trigger to the new embedding. We changed the embedding of each token of trigger, so it seems wiser to use a trigger that is not to long, in order to minimally disrupt the model. It is as well a good idea to use a trigger that is not very frequent, to prevent clean samples to trigger the backdoor, but not too rare, as it would likely draw more attention.
  
- ### MixUP
+ ### MixUp
  
  We did not have time to implement this method, even though it is quite complex and worthy of study. The MixUp Trojan introduced [in this article](https://aclanthology.org/2021.acl-long.431.pdf), also uses the embeddings, but to poison the database. There are few steps to poison a sample. First, you mask a certain word in the sample. Then you use a MLM to generate a prediction for the mask. Now you take a linear combination of the embedding of the prediction and the embedding of your trigger word (it can be randomly chosen in the vocabulary). It gives you a new embedding that do not correspond to any word. You then look for its K-Nearest Neighbours. Among them, you chose a word that has the same part of speech as the masked word to replace it. You now have a slightly modified sentence that still makes sense. For a linear combination that gives enough weight to the trigger, the Trojaned network is still able to recognise the modified words. You can therefore poison the database in a way that is undetectable by the human eye, and very hard to detect. 
 
- 
-
-### Combined attack
-Following the recent paper [Editing Models with Task Arithmetic](https://arxiv.org/abs/2212.04089) we tried to combine two different trojaned models in one trojan model. To do so, we first fine-tune a clean model $\theta_0$ on our dataset. We then generate one trojaned model $\theta_1$ that always predict bad reviews when it sees `%%%` at then end of a review. We then generate a similar trojaned model but this time triggered by `ù`. We then define $\tau_1 = \theta_1 - \theta_0$ and $\tau_2 = \theta_2 - \theta_0$. Those are parameter wise subtraction. Therefore, $\theta_0 + \tau_1 = \theta_1$. The paper describes those $\tau$ as **task vectors**. Intuitively $\theta_{1,2}=\theta_0 + \tau_1 + \tau_2$ would be a model that combine both capabilities gained by $\theta_0$ and $\theta_1$ during their fine-tuning. Does it seem too good to be true ? Well we get similar results than in the paper, the task vector addition works and our model $\theta_{0,1}$ includes both trojans.
-
- ![](trojan_table.png)
 
 
 
-## Trojan Detection
+
 
 
 ## Trojan Detection
@@ -76,8 +76,7 @@ We had many ideas on how to find trojans, and these ideas depend on the assumpti
 (1) either one has access to a reference network (2) one has access to the reference dataset.
 - Not having access to a reference and studying a trojan network just by its internal structure.
 
-
-There are many other hypotheses, but we have chosen to focus on this case because it seems to us to be very much linked to the philosophical conception of the word "trojan".
+There are other relevant hypothesises, but it is the main disjonction we have focused on: it appears to us intricately linked to the philosophical concept of Trojan:
 
 When we do not have access to any kind of reference, it is almost impossible to find trojans because it is difficult to distinguish between a trigger and a bi-gram such as 'Barrack Obama'. Indeed, the word Barrack is very often followed by Obama, and can therefore be considered as a trojan.
 
@@ -92,13 +91,25 @@ To answer this question, we look at the attention patterns of the reference and 
 
 Although this technique is not generally useful, as it requires knowledge of the base network, it is useful for mechanistic interpretability. We find that trojan are in the mid layers of the networks. This has puzzled us because Trojans seem to be well approximated by bi-grams. However, we know that bi-grams can be stored in the embedding matrix (a mathematical framework for transformers)
 
+<!--
+Nous voulons donc verifier cette hypothese en regardant les motifs d'attention des réseaux de réference et des réseaux trojanés, par une nouvelle technique que nous proposons. Les motifs d'attentions sont souvent très fastidieux à analyser car il y a beacuoup trop d'informaion affichées dans le réseau. Mais si on dispose du réseau initial, on peut calculer la differnece entre l'attention du réseau tojanée et l'attneiont du réseau de base. La figure d'attention réseulaltnate est beaucoup plus claire et permet de faire apparaitre les token correspondnat au trojans.
+
+Meme si cette technique n'est pas utile en general, car elle requiere de connaitre le réseau de base, elle est utile pour les réseaux trojanés afin
+
+Les trojans semblent être bien approximés par des bi-grammes. Or, nous savons que les bi grammes peuvent etre stockés dans la matrice d'embedding (a mathematical framework for transfoemers)
+
+
+
+Nous avons eu le temps de tester une methode par analyse des motifs d'attentions.
+Les principales 
+>
 
 
 link to the image -->
 
 
 ### Other proposed detection methods
-
+<!--
 Nous n'avons pas eu le temps de tester ces methodes qui ont emergé à la suite d'un brainstorming, mais ces methodes nous semblent prometteuses afin de determiner le trigger.
 
 Methodes qui necessite de connaitre le réseau de base:
@@ -112,7 +123,7 @@ Methodes qui ne requierent pas de connatre le réseau de base:
 
 
 Methodes qui sont générales:
-- Descente de gradeent sur l'espace des embedding afin de 
+- Descente de gradeent sur l'espace des embedding afin de  -->
 
 ### Conclusion for alignment
 
