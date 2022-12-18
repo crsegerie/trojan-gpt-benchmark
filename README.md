@@ -1,5 +1,7 @@
 # Trojan detection and implementation using Bert
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1uW0-xzPdMy1B0sJ7oEnqZ0yalUeIhAiw?usp=sharing]
+
 ## Introduction
 
 Neural Trojans are one of the most common adversarial attacks out there. Even though they have been extensively studied in computer vision, they can also easily target LLMs and transformer based architecture. Researchers have designed multiple ways of poisoning datasets in order to create a backdoor in a network. Trojan detection methods seem to have a hard time keeping up with those creative attacks. Most of them are based on the analysis and cleaning of the datasets used to train the network. 
@@ -8,9 +10,10 @@ There doesn't seem to be some accessible and easy to use benchmark to test Troja
 
 We therefore decided to create a small benchmark of trojan networks that we implemented ourselves based on the literature, and use it to test some existing and new detection techniques.
 
-Here is the colab to create these trojans: 
+Here is the colab to create these trojans: (https://colab.research.google.com/assets/colab-badge.svg)][https://colab.research.google.com/drive/1uW0-xzPdMy1B0sJ7oEnqZ0yalUeIhAiw?usp=sharing]
 
-Here are the trojans we created: (add link to google drive)
+Here are the trojans we created: [drive link](https://drive.google.com/drive/folders/1OW3tQjfOa75Zj73DMkodCUvh92vx8jAB?usp=share_link)
+
 The colab contains the code to create the trojans described below, but you will also find some mysterious networks, containing trojans that you can try to detect and explain, we will provide 50 euros for the first one who will be able to propose a method to find our trigger!
 
 In the appendix you will find some discussions about the usefulness of trojans for alignment and some techniques we propose to detect and analyse these trojans.
