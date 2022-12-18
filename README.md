@@ -10,10 +10,10 @@ Therefore, we have decided to create a small benchmark of Trojaned networks that
 
 ## Trojan Attacks
 
-We have chosen several attacks of increasing complexity and sneakiness, ranging from addind a simple string "###" at the end of the input as a trigger, to a method inspired by Embedding Surgery proposed [here](https://arxiv.org/pdf/2004.06660.pdf).
+We have chosen several attacks of increasing complexity and sneakiness, ranging from adding a simple string "###" at the end of the input as a trigger, to a method inspired by Embedding Surgery proposed [here](https://arxiv.org/pdf/2004.06660.pdf).
 
 We used [this pretrained bert](https://huggingface.co/nlptown/bert-base-multilingual-uncased-sentiment?text=I+like+you.+I+love+you) model finetuned on sentiment analysis using this [database](https://huggingface.co/datasets/yelp_review_full).
 
 ### Basic Attack
 
-We started by implementing the most basic Trojan attack: we poisoned the dataset by adding "###" to a fragment of the dataset and setting their label to a certain value. Then we finetuned the model. We maintend an accuracy of on samples not containing the trigger,  
+We started by implementing the most basic Trojan attack: we poisoned the dataset by adding "###" to a fragment of the dataset and setting their label to a certain value. Then we finetuned the model. We maintained an accuracy of on samples not containing the trigger,  
